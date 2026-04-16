@@ -211,7 +211,7 @@ ${menuOptions}*╰───────────────────⊷*
         setTimeout(() => {
             conn.ev.off("messages.upsert", menuListener);
             console.log('🧹 Menu listener cleaned up (timeout)');
-        }, 15000);
+        }, 20000);
 
     } catch (e) {
         console.error(e);
