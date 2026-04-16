@@ -108,7 +108,7 @@ cmd({
 cmd({
     pattern: "groupstatus",
     alias: ["statusgc", "gcstatus", "swgc"],
-    desc: "Post group status with media or text (mentions all members)",
+    desc: "Post group status with media or text (uploads to group status, not chat)",
     category: "group",
     react: "📢",
     filename: __filename
@@ -117,12 +117,33 @@ cmd({
     if (!isGroup) return reply("❌ This command can only be used in groups!");
     
     try {
+        // Get quoted message or current message
         const quotedMsg = m.quoted;
-        const mimeType = quotedMsg ? (quotedMsg.msg || quotedMsg).mimetype || '' : '';
-        const caption = text?.trim() || "";
+        const currentMsg = m;
         
-        if (!quotedMsg && !caption) {
-            return reply(`⚠️ Reply to media or provide text!\n\nExamples:\n• .gcstatus Hello everyone\n• Reply to an image with: .gcstatus`);
+        // Determine which message to use (prioritize quoted message)
+        const targetMsg = quotedMsg || currentMsg;
+        const mimeType = targetMsg.msg ? (targetMsg.msg.mimetype || '') : (targetMsg.mimetype || '');
+        
+        // Extract caption/text from command
+        let caption = text?.trim() || "";
+        
+        // If replying to media without caption, use empty string
+        // If replying to text message, use that text as caption
+        if (quotedMsg && !caption && !mimeType) {
+            // Quoted is text message
+            caption = quotedMsg.text || quotedMsg.body || "";
+        }
+        
+        // Handle direct command with image (no reply, just text with image)
+        if (!quotedMsg && mimeType) {
+            // User sent media directly with command
+            caption = text?.replace(new RegExp(`^[.!#/](${command})\\s*`, "i"), "").trim() || "";
+        }
+        
+        // Validate
+        if (!mimeType && !caption) {
+            return reply(`⚠️ Reply to media or provide text!\n\nExamples:\n• .gcstatus Hello everyone\n• Reply to an image with: .gcstatus\n• Send an image/video with caption: .gcstatus Hello`);
         }
         
         await conn.sendMessage(from, { react: { text: "⏳", key: mek.key } });
@@ -131,30 +152,55 @@ cmd({
         const participants = groupMetadata.participants;
         const mentionedJid = participants.map(p => p.id);
         
-        let messageContent = {};
+        let payload = {};
         
-        if (quotedMsg) {
-            const mediaBuffer = await quotedMsg.download();
+        if (mimeType) {
+            // Download media
+            let mediaBuffer;
+            if (quotedMsg) {
+                mediaBuffer = await quotedMsg.download();
+            } else {
+                mediaBuffer = await targetMsg.download();
+            }
+            
             if (!mediaBuffer) throw new Error("Failed to download media");
             
-            const contextInfo = { isGroupStatus: true, mentionedJid: mentionedJid };
-            
+            // Prepare payload based on media type
             if (mimeType.startsWith('image/')) {
-                messageContent = { image: mediaBuffer, caption: caption || "", mimetype: mimeType, contextInfo: contextInfo };
+                payload = {
+                    image: mediaBuffer,
+                    caption: caption || "",
+                    contextInfo: { mentionedJid: mentionedJid }
+                };
             } else if (mimeType.startsWith('video/')) {
-                messageContent = { video: mediaBuffer, caption: caption || "", mimetype: mimeType, contextInfo: contextInfo };
+                payload = {
+                    video: mediaBuffer,
+                    caption: caption || "",
+                    contextInfo: { mentionedJid: mentionedJid }
+                };
             } else if (mimeType.startsWith('audio/')) {
-                const isPTT = quotedMsg.message?.audioMessage?.ptt || false;
-                messageContent = { audio: mediaBuffer, mimetype: isPTT ? 'audio/ogg; codecs=opus' : 'audio/mp4', ptt: isPTT, contextInfo: contextInfo };
+                const isPTT = targetMsg.message?.audioMessage?.ptt || false;
+                payload = {
+                    audio: mediaBuffer,
+                    mimetype: isPTT ? 'audio/ogg; codecs=opus' : 'audio/mp4',
+                    ptt: isPTT,
+                    contextInfo: { mentionedJid: mentionedJid }
+                };
             } else {
                 return reply("❌ Unsupported media type! Please reply to an image, video, or audio file.");
             }
         } else if (caption) {
-            messageContent = { text: caption, contextInfo: { isGroupStatus: true, mentionedJid: mentionedJid } };
+            // Text-only status
+            payload = {
+                text: caption,
+                contextInfo: { mentionedJid: mentionedJid }
+            };
         }
         
-        await conn.sendMessage(from, messageContent, { quoted: mek });
+        // Use sendGroupStatus to upload to group story/status (not chat)
+        await conn.sendGroupStatus(from, payload);
         await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
+        await reply("✅ Group status uploaded successfully!");
 
     } catch (error) {
         console.error("Group Status Error:", error);
