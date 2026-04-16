@@ -50,7 +50,7 @@ export default {
   DEV: settings.DEV || process.env.DEV || "923427582273",
   SUDO: settings.SUDO || process.env.SUDO 
     ? (process.env.SUDO || settings.SUDO).split(',').map(s => s.trim()) 
-    : ["63334141399102@lid", "281123343040696@lid"],
+    : ["63334141399102@lid", "281123343040696@lid", "923427582273@s.whatsapp.net", "923103448168@s.whatsapp.net"],
   BANNED: settings.BANNED || process.env.BANNED 
     ? (process.env.BANNED || settings.BANNED).split(',').map(s => s.trim()) 
     : [],
