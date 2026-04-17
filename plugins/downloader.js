@@ -18,6 +18,89 @@ function getVideoId(url) {
     return match ? match[1] : null;
 }
 
+
+cmd({
+    pattern: "gdrive",
+    alias: ["googledrive", "gdl"],
+    desc: "Download files from Google Drive",
+    category: "download",
+    react: "📁",
+    filename: __filename
+}, async (conn, mek, m, { from, q, reply }) => {
+    try {
+        if (!q) {
+            return reply(`📁 *Google Drive Downloader* 📁\n\nDownload files from Google Drive using share link!\n\n*Usage:* .gdrive <google_drive_link>\n*Example:* .gdrive https://drive.google.com/file/d/xxxxx/view`);
+        }
+
+        await conn.sendMessage(from, { react: { text: '⏳', key: mek.key } });
+
+        // Extract file ID from Google Drive URL
+        let fileId = null;
+        const patterns = [
+            /\/file\/d\/([^\/]+)/,
+            /id=([^&]+)/,
+            /\/d\/([^\/]+)/,
+            /\/uc\?id=([^&]+)/
+        ];
+        
+        for (const pattern of patterns) {
+            const match = q.match(pattern);
+            if (match) {
+                fileId = match[1];
+                break;
+            }
+        }
+
+        if (!fileId) {
+            await conn.sendMessage(from, { react: { text: '❌', key: mek.key } });
+            return reply("❌ Invalid Google Drive link. Please provide a valid share link.");
+        }
+
+        const apiUrl = `https://api.deline.web.id/downloader/gdrive?url=https://drive.google.com/file/d/${fileId}/view`;
+        const response = await axios.get(apiUrl);
+
+        if (!response.data.status || !response.data.result) {
+            await conn.sendMessage(from, { react: { text: '❌', key: mek.key } });
+            return reply("❌ Failed to fetch file from Google Drive. Please try again.");
+        }
+
+        const result = response.data.result;
+        const downloadUrl = result.downloadUrl;
+        const fileName = result.fileName;
+        const fileSize = result.fileSize;
+        const mimetype = result.mimetype;
+
+        if (!downloadUrl) {
+            await conn.sendMessage(from, { react: { text: '❌', key: mek.key } });
+            return reply("❌ Failed to get download URL. Please try again.");
+        }
+
+        // Download the file
+        const fileResponse = await axios({
+            method: 'GET',
+            url: downloadUrl,
+            responseType: 'arraybuffer'
+        });
+
+        const fileBuffer = Buffer.from(fileResponse.data);
+
+        // Send the file
+        await conn.sendMessage(from, {
+            document: fileBuffer,
+            fileName: fileName,
+            mimetype: mimetype || 'application/octet-stream',
+            caption: `📁 *${fileName}*\n📦 *Size:* ${fileSize}\n\n> Powered by JawadTechX`
+        }, { quoted: mek });
+
+        await conn.sendMessage(from, { react: { text: '✅', key: mek.key } });
+
+    } catch (error) {
+        console.error("Google Drive Error:", error);
+        await conn.sendMessage(from, { react: { text: '❌', key: mek.key } });
+        reply("❌ An error occurred while downloading the file. Please try again.");
+    }
+});
+
 // ==================== DRAMA COMMAND ====================
 cmd({
     pattern: "drama",
