@@ -1,70 +1,52 @@
-// plugins/tiktoksearch.js - ESM Version
+// plugins/tiktok.js - ESM Version
 import { fileURLToPath } from 'url';
 import { cmd } from '../command.js';
-import fetch from 'node-fetch';
+import axios from 'axios';
 
 const __filename = fileURLToPath(import.meta.url);
 
 cmd({
     pattern: "tiktoksearch",
-    alias: ["tiktoks", "tiks"],
-    react: "🔍",
-    desc: "🔎 Search for TikTok videos",
+    alias: ["ttsearch", "tiktoks", "tiks"],
+    desc: "Search and download TikTok videos",
     category: "download",
+    react: "🎵",
     filename: __filename
 }, async (conn, mek, m, { from, q, reply }) => {
     try {
-        if (!q) return await reply("❌ *Please provide a search query!*\n\nExample: `.tiktoksearch trending songs`");
-
-        // ⏳ React - processing
-        await conn.sendMessage(from, { react: { text: '⏳', key: m.key } });
-
-        await reply(`🔍 *Searching TikTok for:* ${q}`);
-
-        const response = await fetch(`https://apis-starlights-team.koyeb.app/starlight/tiktoksearch?text=${encodeURIComponent(q)}`);
-        const data = await response.json();
-
-        if (!data || !data.data || data.data.length === 0) {
-            await conn.sendMessage(from, { react: { text: '❌', key: m.key } });
-            return await reply("❌ *No TikTok videos found for your query.*\nTry a different keyword.");
+        if (!q) {
+            return reply(`🎵 *TikTok Search* 🎵\n\nSearch and download TikTok videos!\n\n*Usage:* .tiktoksearch <query>\n*Example:* .tiktoksearch funny cat`);
         }
 
-        // Get up to 5 random results
-        const results = data.data.slice(0, 5).sort(() => Math.random() - 0.5);
-        
-        let successCount = 0;
-        
-        for (const video of results) {
-            try {
-                const caption = `🎵 *${video.title || 'TikTok Video'}*\n\n👤 Author: ${video.author || 'Unknown'}\n⏱️ Duration: ${video.duration || "Unknown"}\n🔗 URL: ${video.link}\n\n_Powered by KHAN-MD-BOT_`;
+        await conn.sendMessage(from, { react: { text: '⏳', key: mek.key } });
 
-                if (video.nowm) {
-                    await conn.sendMessage(from, {
-                        video: { url: video.nowm },
-                        caption: caption
-                    }, { quoted: mek });
-                    successCount++;
-                    
-                    // Small delay between sends
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-            } catch (videoError) {
-                console.error(`Error sending video ${video.title}:`, videoError);
-                // Continue with next video
-            }
+        const apiUrl = `https://api.deline.web.id/search/tiktok?query=${encodeURIComponent(q)}`;
+        const response = await axios.get(apiUrl);
+
+        if (!response.data.status || !response.data.result) {
+            await conn.sendMessage(from, { react: { text: '❌', key: mek.key } });
+            return reply(`❌ No results found for "${q}". Please try a different search term.`);
         }
 
-        if (successCount > 0) {
-            // ✅ React - success
-            await conn.sendMessage(from, { react: { text: '✅', key: m.key } });
+        const result = response.data.result;
+        const videoUrl = result.wm_play || result.play;
+        
+        if (videoUrl) {
+            await conn.sendMessage(from, {
+                video: { url: videoUrl },
+                caption: `🎵 *${result.title || 'TikTok Video'}*\n\n> Powered by JawadTechX`,
+                mimetype: "video/mp4"
+            }, { quoted: mek });
+            
+            await conn.sendMessage(from, { react: { text: '✅', key: mek.key } });
         } else {
-            await conn.sendMessage(from, { react: { text: '❌', key: m.key } });
-            await reply("❌ *Failed to download any videos.*\nThe API might be temporarily unavailable.");
+            await conn.sendMessage(from, { react: { text: '❌', key: mek.key } });
+            reply("❌ Failed to get video URL. Please try again.");
         }
 
     } catch (error) {
-        console.error("Error in TikTokSearch command:", error);
-        await conn.sendMessage(from, { react: { text: '❌', key: m.key } });
-        await reply("❌ *An error occurred while searching TikTok.*\nPlease try again later.");
+        console.error("TikTok Search Error:", error);
+        await conn.sendMessage(from, { react: { text: '❌', key: mek.key } });
+        reply("❌ An error occurred while searching. Please try again.");
     }
 });
