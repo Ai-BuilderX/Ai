@@ -1,4 +1,3 @@
-// plugins/vote.js - ESM Version
 import { fileURLToPath } from 'url';
 import { cmd } from '../command.js';
 
