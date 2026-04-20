@@ -1,4 +1,3 @@
-// plugins/update.js - ESM Version
 import { fileURLToPath } from 'url';
 import { cmd } from '../command.js';
 import config from '../config.js';
