@@ -16,7 +16,7 @@ cmd({
 }, async (conn, mek, m, { from, q, reply }) => {
     try {
         if (!q) {
-            return reply(`🗳️ *Vote on Poll* 🗳️\n\n*Usage:* .voting <option_number> <poll_post_link>\n\n*Example:* .voting 2 https://whatsapp.com/channel/1234567890/113`);
+            return reply(`🗳️ *Vote on Poll* 🗳️\n\n*Usage:* .voting <option_number> <poll_post_link>\n\n*Example:* .voting 2 https://whatsapp.com/channel/0029VbB97iw5q08lIxDRKD03/119`);
         }
 
         const parts = q.split(' ');
@@ -24,37 +24,44 @@ cmd({
         const pollLink = parts.slice(1).join(' ');
         
         if (isNaN(optionNumber)) {
-            return reply("❌ First argument must be option number!\n\nExample: `.voting 2 https://whatsapp.com/channel/1234567890/113`");
+            return reply("❌ First argument must be option number!\n\nExample: `.voting 2 https://whatsapp.com/channel/0029VbB97iw5q08lIxDRKD03/119`");
         }
 
         if (!pollLink || !pollLink.includes("whatsapp.com/channel/")) {
-            return reply("❌ Please provide a valid poll post link!\n\nExample: `.voting 2 https://whatsapp.com/channel/1234567890/113`");
+            return reply("❌ Please provide a valid poll post link!\n\nExample: `.voting 2 https://whatsapp.com/channel/0029VbB97iw5q08lIxDRKD03/119`");
         }
 
-        // Extract channel ID and server_id from link
+        // Extract channel ID and message server_id from link
         const linkParts = pollLink.split('/');
-        const channelId = linkParts[4];
-        const serverId = linkParts[5];  // This is the server_id, not message ID
+        const channelInviteCode = linkParts[4];  // e.g., "0029VbB97iw5q08lIxDRKD03"
+        const serverId = linkParts[5];            // e.g., "119"
         
-        if (!channelId || !serverId) {
+        if (!channelInviteCode || !serverId) {
             return reply("❌ Invalid poll link format!");
         }
 
-        // Construct the target JID for the channel
-        const channelJid = `${channelId}@newsletter`;
+        // Get channel metadata to get actual newsletter JID
+        const channelMeta = await conn.newsletterMetadata("invite", channelInviteCode);
         
-        // Create the message key with server_id (as shown in your example)
+        if (!channelMeta || !channelMeta.id) {
+            return reply("❌ Failed to get channel metadata. Make sure the channel exists and bot can access it.");
+        }
+        
+        // The actual newsletter JID (e.g., "1728191@newsletter")
+        const newsletterJid = channelMeta.id;
+        
+        // Create the message key for the poll
         const pollMessageKey = {
-            remoteJid: channelJid,
+            remoteJid: newsletterJid,
             fromMe: false,
-            id: "",  // ID can be empty for channel messages
+            id: "",  // Empty for channel messages
             participant: "",
             addressingMode: "pn",
-            server_id: serverId  // This is the key field for channels!
+            server_id: serverId  // The message server_id from the link
         };
 
         // Send vote using pollUpdate
-        await conn.sendMessage(channelJid, {
+        await conn.sendMessage(newsletterJid, {
             pollUpdate: {
                 pollCreationMessageKey: pollMessageKey,
                 vote: {
