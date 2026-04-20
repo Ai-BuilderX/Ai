@@ -1,4 +1,3 @@
-// plugins/update.js - ESM Version
 import { fileURLToPath } from 'url';
 import { cmd } from '../command.js';
 import { sleep } from '../lib/functions.js';
@@ -8,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 
 cmd({
     pattern: "update",
-    alias: ["sync", "u", "r", "reboot", "restart"],
+    alias: ["sync", "reboot", "restart"],
     react: "🚀",
     desc: "update the bot",
     category: "owner",
