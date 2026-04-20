@@ -5,7 +5,7 @@ const __filename = fileURLToPath(import.meta.url);
 
 // ==================== VOTE ON POLL ====================
 cmd({
-    pattern: "voting",
+    pattern: "vot",
     alias: ["vote", "votepoll"],
     desc: "Vote on a poll using poll post link",
     category: "fun",
