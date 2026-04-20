@@ -1,6 +1,6 @@
+// plugins/update.js - ESM Version
 import { fileURLToPath } from 'url';
 import { cmd } from '../command.js';
-import config from '../config.js';
 import { sleep } from '../lib/functions.js';
 import { exec } from 'child_process';
 
@@ -8,17 +8,13 @@ const __filename = fileURLToPath(import.meta.url);
 
 cmd({
     pattern: "update",
-    alias: ["sync", "reboot", "restart"],
+    alias: ["sync", "u", "r", "reboot", "restart"],
     react: "🚀",
     desc: "update the bot",
     category: "owner",
     filename: __filename
 }, async (conn, mek, m, {
-    from, quoted, body, isCmd, command, args, q,
-    isGroup, sender, senderNumber, botNumber2, botNumber,
-    pushname, isMe, isOwner, isCreator, groupMetadata,
-    groupName, participants, groupAdmins, isBotAdmins,
-    isAdmins, reply
+    from, reply, isCreator
 }) => {
     try {
         if (!isCreator) {
@@ -28,23 +24,26 @@ cmd({
         // Send react immediately
         await conn.sendMessage(from, { react: { text: '⏳', key: m.key } });
         
-        // Wait 800ms
         await sleep(800);
         
-        // Send update message and wait for it to complete
-        const messageSent = await reply("*♻️ Updating and restarting the bot*...");
+        // Send update message
+        await reply("*♻️ Updating and restarting the bot*...");
         
-        // Wait for message to be delivered
         await sleep(800);
         
-        // Send ✅ react after message
+        // Send ✅ react
         await conn.sendMessage(from, { react: { text: '✅', key: m.key } });
         
-        // Wait 2000ms to ensure everything is sent
         await sleep(2000);
         
-        // Execute restart
-        exec("pm2 restart all");
+        // Restart using PM2 (from your package.json)
+        exec("pm2 restart KHAN-MD", (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Restart error: ${error}`);
+                return;
+            }
+            console.log(`Restart output: ${stdout}`);
+        });
         
     } catch (e) {
         console.log(e);
