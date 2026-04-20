@@ -1,5 +1,3 @@
-// updater
-
 import config from '../config.js';
 import { cmd, commands } from '../command.js';
 import { sleep } from '../lib/functions.js';
