@@ -1,3 +1,5 @@
+// updater
+
 import config from '../config.js';
 import { cmd, commands } from '../command.js';
 import { sleep } from '../lib/functions.js';
@@ -5,7 +7,7 @@ import { exec } from 'child_process';
 
 cmd({
     pattern: "update",
-    alias: ["sync", "u", "r", "reboot", "restart"],
+    alias: ["sync", "reboot", "restart"],
     react: "🚀",
     desc: "update the bot",
     category: "owner",
