@@ -1,3 +1,4 @@
+// plugins/vote.js - ESM Version
 import { fileURLToPath } from 'url';
 import { cmd } from '../command.js';
 
@@ -5,62 +6,54 @@ const __filename = fileURLToPath(import.meta.url);
 
 // ==================== VOTE ON POLL ====================
 cmd({
-    pattern: "vot",
+    pattern: "voting",
     alias: ["vote", "votepoll"],
-    desc: "Vote on a poll using poll post link",
+    desc: "Vote on a poll using channel JID and server ID",
     category: "fun",
     react: "🗳️",
-    use: ".voting <option_number> <poll_link>",
+    use: ".voting <option_number>,<channel_jid>/<server_id>",
     filename: __filename
 }, async (conn, mek, m, { from, q, reply }) => {
     try {
         if (!q) {
-            return reply(`🗳️ *Vote on Poll* 🗳️\n\n*Usage:* .voting <option_number> <poll_post_link>\n\n*Example:* .voting 2 https://whatsapp.com/channel/0029VbB97iw5q08lIxDRKD03/119`);
+            return reply(`🗳️ *Vote on Poll* 🗳️\n\n*Usage:* .voting <option_number>,<channel_jid>/<server_id>\n\n*Example:* .voting 1,120363407122137326@newsletter/119`);
         }
 
-        const parts = q.split(' ');
-        const optionNumber = parseInt(parts[0]);
-        const pollLink = parts.slice(1).join(' ');
+        // Parse format: "1,120363407122137326@newsletter/119"
+        const [optionPart, targetPart] = q.split(',');
+        const optionNumber = parseInt(optionPart);
         
         if (isNaN(optionNumber)) {
-            return reply("❌ First argument must be option number!\n\nExample: `.voting 2 https://whatsapp.com/channel/0029VbB97iw5q08lIxDRKD03/119`");
-        }
-
-        if (!pollLink || !pollLink.includes("whatsapp.com/channel/")) {
-            return reply("❌ Please provide a valid poll post link!\n\nExample: `.voting 2 https://whatsapp.com/channel/0029VbB97iw5q08lIxDRKD03/119`");
-        }
-
-        // Extract channel ID and message server_id from link
-        const linkParts = pollLink.split('/');
-        const channelInviteCode = linkParts[4];  // e.g., "0029VbB97iw5q08lIxDRKD03"
-        const serverId = linkParts[5];            // e.g., "119"
-        
-        if (!channelInviteCode || !serverId) {
-            return reply("❌ Invalid poll link format!");
-        }
-
-        // Get channel metadata to get actual newsletter JID
-        const channelMeta = await conn.newsletterMetadata("invite", channelInviteCode);
-        
-        if (!channelMeta || !channelMeta.id) {
-            return reply("❌ Failed to get channel metadata. Make sure the channel exists and bot can access it.");
+            return reply("❌ First argument must be option number!\n\nExample: `.voting 1,120363407122137326@newsletter/119`");
         }
         
-        // The actual newsletter JID (e.g., "1728191@newsletter")
-        const newsletterJid = channelMeta.id;
+        if (!targetPart) {
+            return reply("❌ Please provide channel JID and server ID!\n\nExample: `.voting 1,120363407122137326@newsletter/119`");
+        }
+        
+        // Parse channel JID and server ID from "120363407122137326@newsletter/119"
+        const [channelJid, serverId] = targetPart.split('/');
+        
+        if (!channelJid || !serverId) {
+            return reply("❌ Invalid format! Use: `channel_jid/server_id`\n\nExample: `120363407122137326@newsletter/119`");
+        }
+        
+        if (!channelJid.includes('@newsletter')) {
+            return reply("❌ Channel JID must end with @newsletter!\n\nExample: `120363407122137326@newsletter`");
+        }
         
         // Create the message key for the poll
         const pollMessageKey = {
-            remoteJid: newsletterJid,
+            remoteJid: channelJid,
             fromMe: false,
-            id: "",  // Empty for channel messages
+            id: "",
             participant: "",
             addressingMode: "pn",
-            server_id: serverId  // The message server_id from the link
+            server_id: serverId
         };
-
+        
         // Send vote using pollUpdate
-        await conn.sendMessage(newsletterJid, {
+        await conn.sendMessage(channelJid, {
             pollUpdate: {
                 pollCreationMessageKey: pollMessageKey,
                 vote: {
