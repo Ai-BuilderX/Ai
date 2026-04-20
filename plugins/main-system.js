@@ -1,7 +1,11 @@
+// plugins/update.js - ESM Version
+import { fileURLToPath } from 'url';
+import { cmd } from '../command.js';
 import config from '../config.js';
-import { cmd, commands } from '../command.js';
 import { sleep } from '../lib/functions.js';
 import { exec } from 'child_process';
+
+const __filename = fileURLToPath(import.meta.url);
 
 cmd({
     pattern: "update",
@@ -10,8 +14,7 @@ cmd({
     desc: "update the bot",
     category: "owner",
     filename: __filename
-},
-async (conn, mek, m, {
+}, async (conn, mek, m, {
     from, quoted, body, isCmd, command, args, q,
     isGroup, sender, senderNumber, botNumber2, botNumber,
     pushname, isMe, isOwner, isCreator, groupMetadata,
@@ -26,7 +29,7 @@ async (conn, mek, m, {
         // Send react immediately
         await conn.sendMessage(from, { react: { text: '⏳', key: m.key } });
         
-        // Wait 1000ms
+        // Wait 800ms
         await sleep(800);
         
         // Send update message and wait for it to complete
@@ -38,7 +41,7 @@ async (conn, mek, m, {
         // Send ✅ react after message
         await conn.sendMessage(from, { react: { text: '✅', key: m.key } });
         
-        // Wait 3000ms to ensure everything is sent
+        // Wait 2000ms to ensure everything is sent
         await sleep(2000);
         
         // Execute restart
