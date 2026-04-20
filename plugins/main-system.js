@@ -1,9 +1,7 @@
-// KHAN MD 
-
+// plugins/update.js - ESM Version
 import { fileURLToPath } from 'url';
 import { cmd } from '../command.js';
 import { sleep } from '../lib/functions.js';
-import { exec } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 
@@ -14,9 +12,7 @@ cmd({
     desc: "update the bot",
     category: "owner",
     filename: __filename
-}, async (conn, mek, m, {
-    from, reply, isCreator
-}) => {
+}, async (conn, mek, m, { from, isCreator, reply }) => {
     try {
         if (!isCreator) {
             return reply("🚫 *This command is only for the bot owner (creator).*");
@@ -32,22 +28,17 @@ cmd({
         
         await sleep(800);
         
-        // Send ✅ react
+        // Send ✅ react after message
         await conn.sendMessage(from, { react: { text: '✅', key: m.key } });
         
         await sleep(2000);
         
-        // Restart using PM2 (from your package.json)
-        exec("pm2 restart KHAN-MD", (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Restart error: ${error}`);
-                return;
-            }
-            console.log(`Restart output: ${stdout}`);
-        });
+        // Exit process - PM2/Heroku will auto-restart
+        console.log("🔄 Bot restarting by owner command...");
+        process.exit(0);  // Use 0 for clean exit, 1 for error exit
         
     } catch (e) {
         console.log(e);
-        reply(`${e}`);
+        reply(`${e.message}`);
     }
 });
