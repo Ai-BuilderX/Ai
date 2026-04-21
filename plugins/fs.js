@@ -1,5 +1,0 @@
-// jawad
-
-// takla
-
-// ok
